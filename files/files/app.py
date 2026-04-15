@@ -29,21 +29,36 @@ def download_model(filename, url):
             print(f"Error downloading {filename}: {e}")
             raise
 
-# Download all models
-for filename, url in MODEL_FILES.items():
-    download_model(filename, url)
+# Lazy load models - only download when first needed
+crop_recom_model = None
+dist_crop_season_transformer = None
+crop_predict_model = None
 
-# Load models
-with open("Crop_Recom.pkl", "rb") as f:
-    crop_recom_model = pickle.load(f)
+def load_crop_recom_model():
+    global crop_recom_model
+    if crop_recom_model is None:
+        download_model("Crop_Recom.pkl", MODEL_FILES["Crop_Recom.pkl"])
+        with open("Crop_Recom.pkl", "rb") as f:
+            crop_recom_model = pickle.load(f)
+    return crop_recom_model
 
-with open("dist_crop_season.pkl", "rb") as f:
-    dist_crop_season_transformer = pickle.load(f)
+def load_crop_predict_model():
+    global crop_predict_model
+    if crop_predict_model is None:
+        download_model("crop_predict.pkl", MODEL_FILES["crop_predict.pkl"])
+        with open("crop_predict.pkl", "rb") as f:
+            crop_predict_model = pickle.load(f)
+    return crop_predict_model
 
-with open("crop_predict.pkl", "rb") as f:
-    crop_predict_model = pickle.load(f)
+def load_dist_crop_season_model():
+    global dist_crop_season_transformer
+    if dist_crop_season_transformer is None:
+        download_model("dist_crop_season.pkl", MODEL_FILES["dist_crop_season.pkl"])
+        with open("dist_crop_season.pkl", "rb") as f:
+            dist_crop_season_transformer = pickle.load(f)
+    return dist_crop_season_transformer
 
-
+# Pre-load CROP_LABELS and feature names (these are stored in the models)
 CROP_LABELS = [
     'apple', 'banana', 'blackgram', 'chickpea', 'coconut', 'coffee',
     'cotton', 'grapes', 'jute', 'kidneybeans', 'lentil', 'maize',
@@ -61,25 +76,37 @@ CROP_EMOJIS = {
 }
 
 
-PREDICT_FEATURES = list(crop_predict_model.feature_names_in_)
+PREDICT_FEATURES = None
+DISTRICTS = None
+CROPS_PREDICT = None
+SEASONS = None
 
-def extract_categories(prefix):
-    return sorted(set(
-        f[len(prefix):] for f in PREDICT_FEATURES if f.startswith(prefix)
-    ))
-
-DISTRICTS = extract_categories("District_")
-CROPS_PREDICT = extract_categories("Crop_")
-SEASONS = extract_categories("Season_")
+def get_predict_features():
+    global PREDICT_FEATURES, DISTRICTS, CROPS_PREDICT, SEASONS
+    if PREDICT_FEATURES is None:
+        model = load_crop_predict_model()
+        PREDICT_FEATURES = list(model.feature_names_in_)
+        
+        def extract_categories(prefix):
+            return sorted(set(
+                f[len(prefix):] for f in PREDICT_FEATURES if f.startswith(prefix)
+            ))
+        
+        DISTRICTS = extract_categories("District_")
+        CROPS_PREDICT = extract_categories("Crop_")
+        SEASONS = extract_categories("Season_")
+    
+    return PREDICT_FEATURES, DISTRICTS, CROPS_PREDICT, SEASONS
 
 
 
 @app.route("/")
 def index():
+    _, districts, crops_predict, seasons = get_predict_features()
     return render_template("index.html",
-                           districts=DISTRICTS,
-                           crops=CROPS_PREDICT,
-                           seasons=SEASONS,
+                           districts=districts,
+                           crops=crops_predict,
+                           seasons=seasons,
                            crop_labels=CROP_LABELS)
 
 
@@ -99,7 +126,8 @@ def recommend():
         ]], columns=["Nitrogen", "phosphorus", "potassium",
                      "temperature", "humidity", "ph", "rainfall"])
 
-        probas = crop_recom_model.predict_proba(features)
+        model = load_crop_recom_model()
+        probas = model.predict_proba(features)
         scores = {CROP_LABELS[i]: float(p[0][1]) for i, p in enumerate(probas)}
         top_crops = sorted(scores.items(), key=lambda x: -x[1])
 
@@ -134,8 +162,12 @@ def predict():
         year = float(data["year"])
         area = float(data["area"])
 
+        # Get features and model
+        predict_features, _, _, _ = get_predict_features()
+        model = load_crop_predict_model()
+
         # Build feature vector matching crop_predict model
-        row = {f: 0 for f in PREDICT_FEATURES}
+        row = {f: 0 for f in predict_features}
         row["Year"] = year
         row["Area"] = area
 
@@ -150,8 +182,8 @@ def predict():
         if season_key in row:
             row[season_key] = 1
 
-        df = pd.DataFrame([row])[PREDICT_FEATURES]
-        prediction = crop_predict_model.predict(df)[0]
+        df = pd.DataFrame([row])[predict_features]
+        prediction = model.predict(df)[0]
 
         return jsonify({
             "success": True,
@@ -169,10 +201,11 @@ def predict():
 
 @app.route("/api/meta")
 def meta():
+    _, districts, crops_predict, seasons = get_predict_features()
     return jsonify({
-        "districts": DISTRICTS,
-        "crops": CROPS_PREDICT,
-        "seasons": SEASONS,
+        "districts": districts,
+        "crops": crops_predict,
+        "seasons": seasons,
         "crop_labels": CROP_LABELS
     })
 
