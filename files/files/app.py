@@ -11,8 +11,8 @@ warnings.filterwarnings("ignore")
 app = Flask(__name__, template_folder=".", static_folder=".")
 CORS(app)
 
-# Model URLs from Hugging Face
-HF_BASE = "https://huggingface.co/TheTejas09/cropAi/resolve/main"
+# Model URLs from Hugging Face (using raw CDN URLs)
+HF_BASE = "https://huggingface.co/TheTejas09/cropAi/raw/main"
 MODEL_URLS = {
     "Crop_Recom.pkl": f"{HF_BASE}/Crop_Recom.pkl",
     "dist_crop_season.pkl": f"{HF_BASE}/dist_crop_season.pkl",
