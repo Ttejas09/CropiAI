@@ -12,11 +12,11 @@ warnings.filterwarnings("ignore")
 app = Flask(__name__, template_folder=".", static_folder=".")
 CORS(app)
 
-# Model file paths
+# Model file paths - Download from Hugging Face Hub
 MODEL_FILES = {
-    "Crop_Recom.pkl": "https://github.com/Ttejas09/CropiAI/releases/download/v1.0/Crop_Recom.pkl",
-    "dist_crop_season.pkl": "https://github.com/Ttejas09/CropiAI/releases/download/v1.0/dist_crop_season.pkl",
-    "crop_predict.pkl": "https://github.com/Ttejas09/CropiAI/releases/download/v1.0/crop_predict.pkl"
+    "Crop_Recom.pkl": "https://huggingface.co/TheTejas09/cropAi/resolve/main/Crop_Recom.pkl",
+    "dist_crop_season.pkl": "https://huggingface.co/TheTejas09/cropAi/resolve/main/dist_crop_season.pkl",
+    "crop_predict.pkl": "https://huggingface.co/TheTejas09/cropAi/resolve/main/crop_predict.pkl"
 }
 
 def download_model(filename, url):
