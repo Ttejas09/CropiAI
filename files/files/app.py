@@ -5,66 +5,50 @@ import pandas as pd
 import warnings
 import os
 import urllib.request
-from pathlib import Path
 from flask_cors import CORS
 warnings.filterwarnings("ignore")
 
 app = Flask(__name__, template_folder=".", static_folder=".")
 CORS(app)
 
-# Model file paths - Download from Hugging Face Hub
-MODEL_FILES = {
-    "Crop_Recom.pkl": "https://huggingface.co/TheTejas09/cropAi/resolve/main/Crop_Recom.pkl",
-    "dist_crop_season.pkl": "https://huggingface.co/TheTejas09/cropAi/resolve/main/dist_crop_season.pkl",
-    "crop_predict.pkl": "https://huggingface.co/TheTejas09/cropAi/resolve/main/crop_predict.pkl"
+# Model URLs from Hugging Face
+HF_BASE = "https://huggingface.co/TheTejas09/cropAi/resolve/main"
+MODEL_URLS = {
+    "Crop_Recom.pkl": f"{HF_BASE}/Crop_Recom.pkl",
+    "dist_crop_season.pkl": f"{HF_BASE}/dist_crop_season.pkl",
+    "crop_predict.pkl": f"{HF_BASE}/crop_predict.pkl"
 }
 
-def download_model(filename, url):
-    """Download model file if it doesn't exist"""
-    if not os.path.exists(filename):
+# Cache models in memory
+MODELS = {}
+
+def download_model_safe(filename, url, timeout=60):
+    """Download with timeout"""
+    try:
         print(f"Downloading {filename}...")
-        try:
-            urllib.request.urlretrieve(url, filename)
-            print(f"Successfully downloaded {filename}")
-            return True
-        except Exception as e:
-            print(f"Error downloading {filename}: {e}")
-            return False
-    return True
+        urllib.request.urlretrieve(url, filename, timeout=timeout)
+        print(f"✓ Downloaded {filename}")
+        return True
+    except Exception as e:
+        print(f"✗ Failed to download {filename}: {e}")
+        return False
 
-# Lazy load models
-crop_recom_model = None
-dist_crop_season_transformer = None
-crop_predict_model = None
+def get_model(model_name):
+    """Lazy load model on demand"""
+    if model_name not in MODELS:
+        filepath = model_name
+        url = MODEL_URLS.get(model_name)
+        
+        if not os.path.exists(filepath):
+            if not url or not download_model_safe(filepath, url):
+                raise Exception(f"Cannot load {model_name}")
+        
+        with open(filepath, 'rb') as f:
+            MODELS[model_name] = pickle.load(f)
+    
+    return MODELS[model_name]
 
-def load_crop_recom_model():
-    global crop_recom_model
-    if crop_recom_model is None:
-        if not download_model("Crop_Recom.pkl", MODEL_FILES["Crop_Recom.pkl"]):
-            raise Exception("Failed to load Crop_Recom model")
-        with open("Crop_Recom.pkl", "rb") as f:
-            crop_recom_model = pickle.load(f)
-    return crop_recom_model
-
-def load_crop_predict_model():
-    global crop_predict_model
-    if crop_predict_model is None:
-        if not download_model("crop_predict.pkl", MODEL_FILES["crop_predict.pkl"]):
-            raise Exception("Failed to load crop_predict model")
-        with open("crop_predict.pkl", "rb") as f:
-            crop_predict_model = pickle.load(f)
-    return crop_predict_model
-
-def load_dist_crop_season_model():
-    global dist_crop_season_transformer
-    if dist_crop_season_transformer is None:
-        if not download_model("dist_crop_season.pkl", MODEL_FILES["dist_crop_season.pkl"]):
-            raise Exception("Failed to load dist_crop_season model")
-        with open("dist_crop_season.pkl", "rb") as f:
-            dist_crop_season_transformer = pickle.load(f)
-    return dist_crop_season_transformer
-
-# Pre-load CROP_LABELS and feature names (these are stored in the models)
+# Constants - no model loading needed
 CROP_LABELS = [
     'apple', 'banana', 'blackgram', 'chickpea', 'coconut', 'coffee',
     'cotton', 'grapes', 'jute', 'kidneybeans', 'lentil', 'maize',
@@ -81,51 +65,55 @@ CROP_EMOJIS = {
     'rice': '🌾', 'watermelon': '🍉'
 }
 
+# Cached feature info
+_cached_features = None
 
-PREDICT_FEATURES = None
-DISTRICTS = None
-CROPS_PREDICT = None
-SEASONS = None
-
-def get_predict_features():
-    global PREDICT_FEATURES, DISTRICTS, CROPS_PREDICT, SEASONS
-    if PREDICT_FEATURES is None:
-        model = load_crop_predict_model()
-        PREDICT_FEATURES = list(model.feature_names_in_)
+def get_features():
+    """Get model features (cached)"""
+    global _cached_features
+    if _cached_features is None:
+        model = get_model("crop_predict.pkl")
+        features = list(model.feature_names_in_)
         
-        def extract_categories(prefix):
-            return sorted(set(
-                f[len(prefix):] for f in PREDICT_FEATURES if f.startswith(prefix)
-            ))
+        # Extract categories
+        districts = sorted(set(f[9:] for f in features if f.startswith("District_")))
+        crops = sorted(set(f[5:] for f in features if f.startswith("Crop_")))
+        seasons = sorted(set(f[7:] for f in features if f.startswith("Season_")))
         
-        DISTRICTS = extract_categories("District_")
-        CROPS_PREDICT = extract_categories("Crop_")
-        SEASONS = extract_categories("Season_")
-    
-    return PREDICT_FEATURES, DISTRICTS, CROPS_PREDICT, SEASONS
+        _cached_features = {
+            'features': features,
+            'districts': districts,
+            'crops': crops,
+            'seasons': seasons
+        }
+    return _cached_features
 
-
+# Routes
 @app.route("/status")
 def status():
-    """Health check endpoint"""
-    return jsonify({"status": "ok", "app": "CropiAI"})
-
+    """Health check - no model loading needed"""
+    return jsonify({"status": "ok", "app": "CropiAI v1.0"})
 
 @app.route("/")
 def index():
-    _, districts, crops_predict, seasons = get_predict_features()
-    return render_template("index.html",
-                           districts=districts,
-                           crops=crops_predict,
-                           seasons=seasons,
-                           crop_labels=CROP_LABELS)
-
+    """Main page"""
+    try:
+        info = get_features()
+        return render_template("index.html",
+                               districts=info['districts'],
+                               crops=info['crops'],
+                               seasons=info['seasons'],
+                               crop_labels=CROP_LABELS)
+    except Exception as e:
+        return f"<h1>Loading models...</h1><p>{str(e)}</p>", 202
 
 @app.route("/api/recommend", methods=["POST"])
 def recommend():
-    """Recommend suitable crops based on soil & climate parameters."""
-    data = request.json
+    """Recommend crops based on soil/climate"""
     try:
+        data = request.json
+        model = get_model("Crop_Recom.pkl")
+        
         features = pd.DataFrame([[
             float(data["nitrogen"]),
             float(data["phosphorus"]),
@@ -136,90 +124,73 @@ def recommend():
             float(data["rainfall"])
         ]], columns=["Nitrogen", "phosphorus", "potassium",
                      "temperature", "humidity", "ph", "rainfall"])
-
-        model = load_crop_recom_model()
+        
         probas = model.predict_proba(features)
         scores = {CROP_LABELS[i]: float(p[0][1]) for i, p in enumerate(probas)}
         top_crops = sorted(scores.items(), key=lambda x: -x[1])
-
-        results = []
-        for crop, score in top_crops:
-            if score > 0:
-                results.append({
-                    "crop": crop,
-                    "score": round(score * 100, 1),
-                    "emoji": CROP_EMOJIS.get(crop, "🌿")
-                })
-
+        
+        results = [{
+            "crop": crop,
+            "score": round(score * 100, 1),
+            "emoji": CROP_EMOJIS.get(crop, "🌿")
+        } for crop, score in top_crops if score > 0][:10]
+        
         if not results:
-           
-            results = [{"crop": c, "score": round(s * 100, 1),
-                        "emoji": CROP_EMOJIS.get(c, "🌿")}
-                       for c, s in top_crops[:5]]
-
-        return jsonify({"success": True, "recommendations": results[:10]})
+            results = [{
+                "crop": c,
+                "score": round(s * 100, 1),
+                "emoji": CROP_EMOJIS.get(c, "🌿")
+            } for c, s in top_crops[:5]]
+        
+        return jsonify({"success": True, "recommendations": results})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
-
 @app.route("/api/predict", methods=["POST"])
 def predict():
-    """Predict crop production given district, crop, season, year and area."""
-    data = request.json
+    """Predict production"""
     try:
-        district = data["district"]
-        crop = data["crop"]
-        season = data["season"]
-        year = float(data["year"])
-        area = float(data["area"])
-
-        # Get features and model
-        predict_features, _, _, _ = get_predict_features()
-        model = load_crop_predict_model()
-
-        # Build feature vector matching crop_predict model
-        row = {f: 0 for f in predict_features}
-        row["Year"] = year
-        row["Area"] = area
-
-        dist_key = f"District_{district}"
-        crop_key = f"Crop_{crop}"
-        season_key = f"Season_{season}"
-
-        if dist_key in row:
-            row[dist_key] = 1
-        if crop_key in row:
-            row[crop_key] = 1
-        if season_key in row:
-            row[season_key] = 1
-
-        df = pd.DataFrame([row])[predict_features]
+        data = request.json
+        info = get_features()
+        model = get_model("crop_predict.pkl")
+        
+        features = info['features']
+        row = {f: 0 for f in features}
+        row["Year"] = float(data["year"])
+        row["Area"] = float(data["area"])
+        row[f"District_{data['district']}"] = 1
+        row[f"Crop_{data['crop']}"] = 1
+        row[f"Season_{data['season']}"] = 1
+        
+        df = pd.DataFrame([row])[features]
         prediction = model.predict(df)[0]
-
+        
         return jsonify({
             "success": True,
             "production": round(float(prediction), 2),
             "unit": "metric tonnes",
-            "district": district,
-            "crop": crop,
-            "season": season,
-            "year": int(year),
-            "area": area
+            "district": data["district"],
+            "crop": data["crop"],
+            "season": data["season"],
+            "year": int(float(data["year"])),
+            "area": float(data["area"])
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
-
 @app.route("/api/meta")
 def meta():
-    _, districts, crops_predict, seasons = get_predict_features()
-    return jsonify({
-        "districts": districts,
-        "crops": crops_predict,
-        "seasons": seasons,
-        "crop_labels": CROP_LABELS
-    })
-
+    """Get metadata"""
+    try:
+        info = get_features()
+        return jsonify({
+            "districts": info['districts'],
+            "crops": info['crops'],
+            "seasons": info['seasons'],
+            "crop_labels": CROP_LABELS
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
