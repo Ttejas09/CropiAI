@@ -4,11 +4,36 @@ import numpy as np
 import pandas as pd
 import warnings
 import os
+import urllib.request
 from flask_cors import CORS
 warnings.filterwarnings("ignore")
 
 app = Flask(__name__, template_folder=".", static_folder=".")
 CORS(app)
+
+# Download model files if they don't exist
+MODEL_FILES = {
+    "Crop_Recom.pkl": "https://github.com/Ttejas09/CropiAI/releases/download/v1.0/Crop_Recom.pkl",
+    "dist_crop_season.pkl": "https://github.com/Ttejas09/CropiAI/releases/download/v1.0/dist_crop_season.pkl",
+    "crop_predict.pkl": "https://github.com/Ttejas09/CropiAI/releases/download/v1.0/crop_predict.pkl"
+}
+
+def download_model(filename, url):
+    """Download model file if it doesn't exist"""
+    if not os.path.exists(filename):
+        print(f"Downloading {filename}...")
+        try:
+            urllib.request.urlretrieve(url, filename)
+            print(f"Successfully downloaded {filename}")
+        except Exception as e:
+            print(f"Error downloading {filename}: {e}")
+            raise
+
+# Download all models
+for filename, url in MODEL_FILES.items():
+    download_model(filename, url)
+
+# Load models
 with open("Crop_Recom.pkl", "rb") as f:
     crop_recom_model = pickle.load(f)
 
