@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KrishiMind — Intelligent Crop Advisory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --earth: #2D1E0F;
+    --clay: #8B4513;
+    --wheat: #D4A853;
+    --sage: #7A9E7E;
+    --sage-light: #A8C5AB;
+    --cream: #F5EDD6;
+    --parchment: #EDE0C4;
+    --leaf: #4A7C59;
+    --sky: #B8D4E3;
+    --mist: #F0EDE8;
+    --dark: #1A1209;
+    --accent: #C85A2A;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--mist);
+    color: var(--earth);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── BACKGROUND TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(122,158,126,0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(212,168,83,0.1) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 30 Q15 20 30 30 Q45 40 60 30' fill='none' stroke='%238B4513' stroke-width='0.3' opacity='0.1'/%3E%3C/svg%3E");
+    background-size: 100% 100%, 100% 100%, 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 10;
+    background: var(--earth);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 72px;
+    box-shadow: 0 4px 24px rgba(45,30,15,0.3);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--sage), var(--leaf));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  .logo-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--cream);
+    letter-spacing: 0.02em;
+  }
+
+  .logo-text span { color: var(--wheat); }
+
+  .header-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--sage-light);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+
+  nav {
+    display: flex;
+    gap: 4px;
+  }
+
+  .nav-btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+  }
+
+  .nav-btn.active {
+    background: var(--wheat);
+    color: var(--earth);
+  }
+
+  .nav-btn:not(.active) {
+    background: transparent;
+    color: var(--cream);
+    border: 1px solid rgba(245,237,214,0.2);
+  }
+
+  .nav-btn:not(.active):hover {
+    background: rgba(245,237,214,0.1);
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 4rem 2rem 2rem;
+  }
+
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--leaf);
+    margin-bottom: 1rem;
+    opacity: 0.9;
+  }
+
+  .hero h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.4rem, 5vw, 3.8rem);
+    font-weight: 300;
+    line-height: 1.1;
+    color: var(--earth);
+    margin-bottom: 1rem;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--clay);
+  }
+
+  .hero p {
+    font-size: 1rem;
+    color: #5A4030;
+    max-width: 520px;
+    margin: 0 auto 2rem;
+    line-height: 1.65;
+    font-weight: 300;
+  }
+
+  /* ── PANELS ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── MAIN CONTENT ── */
+  .main-content {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: white;
+    border-radius: 20px;
+    padding: 2.5rem;
+    box-shadow: 0 2px 40px rgba(45,30,15,0.08), 0 1px 4px rgba(45,30,15,0.05);
+    border: 1px solid rgba(212,168,83,0.2);
+    margin-bottom: 1.5rem;
+  }
+
+  .card-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--earth);
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-subtitle {
+    font-size: 0.82rem;
+    color: #8B7355;
+    margin-bottom: 2rem;
+    font-weight: 300;
+  }
+
+  /* ── FORM GRID ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.2rem;
+    margin-bottom: 2rem;
+  }
+
+  .form-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2rem;
+    margin-bottom: 2rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6B5040;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .field-unit {
+    font-size: 0.65rem;
+    color: #A09080;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  input[type="number"],
+  input[type="text"],
+  select {
+    padding: 12px 16px;
+    border: 1.5px solid #E8DDD0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-family: 'Outfit', sans-serif;
+    color: var(--earth);
+    background: var(--mist);
+    transition: all 0.2s;
+    outline: none;
+    width: 100%;
+    
+  }
+
+  input:focus, select:focus {
+    border-color: var(--sage);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(122,158,126,0.15);
+  }
+
+  select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238B4513' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  /* ── SLIDERS ── */
+  .slider-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .slider-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--leaf);
+    font-weight: 500;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 4px;
+    background: linear-gradient(to right, var(--sage) 0%, var(--sage) var(--pct, 50%), #E8DDD0 var(--pct, 50%));
+    outline: none;
+    cursor: pointer;
+    border: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    border: 2.5px solid var(--leaf);
+    box-shadow: 0 2px 6px rgba(74,124,89,0.3);
+    transition: transform 0.15s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+
+  /* ── BUTTONS ── */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 32px;
+    background: linear-gradient(135deg, var(--leaf) 0%, var(--sage) 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: 0 4px 16px rgba(74,124,89,0.3);
+    letter-spacing: 0.03em;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(74,124,89,0.4);
+  }
+
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-primary svg { width: 18px; height: 18px; }
+
+  /* ── RESULTS ── */
+  .results-section {
+    animation: slideUp 0.4s ease;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Recommendation results */
+  .recom-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .crop-card {
+    background: var(--mist);
+    border: 1.5px solid #E8DDD0;
+    border-radius: 14px;
+    padding: 1.2rem;
+    text-align: center;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .crop-card.top-pick {
+    border-color: var(--wheat);
+    background: linear-gradient(135deg, #FFF9EC, #FFF3D5);
+    box-shadow: 0 4px 16px rgba(212,168,83,0.2);
+  }
+
+  .crop-card.top-pick::before {
+    content: 'BEST MATCH';
+    position: absolute;
+    top: 8px;
+    right: -18px;
+    background: var(--wheat);
+    color: var(--earth);
+    font-size: 0.55rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    font-family: 'DM Mono', monospace;
+    padding: 3px 24px;
+    transform: rotate(35deg);
+  }
+
+  .crop-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(45,30,15,0.1);
+    border-color: var(--sage);
+  }
+
+  .crop-emoji { font-size: 2.2rem; margin-bottom: 8px; }
+
+  .crop-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--earth);
+    text-transform: capitalize;
+    margin-bottom: 6px;
+  }
+
+  .crop-score-bar {
+    height: 4px;
+    background: #E8DDD0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 8px 0 4px;
+  }
+
+  .crop-score-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--sage), var(--leaf));
+    border-radius: 4px;
+    transition: width 0.6s ease;
+  }
+
+  .crop-score-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--leaf);
+    font-weight: 500;
+  }
+
+  /* Prediction result */
+  .prediction-result {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--earth), #3D2A15);
+    border-radius: 16px;
+    color: white;
+    margin-top: 1.5rem;
+  }
+
+  .prediction-icon {
+    font-size: 3.5rem;
+    flex-shrink: 0;
+  }
+
+  .prediction-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--sage-light);
+    margin-bottom: 0.5rem;
+  }
+
+  .prediction-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 3rem;
+    font-weight: 300;
+    color: var(--wheat);
+    line-height: 1;
+  }
+
+  .prediction-unit {
+    font-size: 1rem;
+    color: rgba(245,237,214,0.7);
+    margin-top: 0.3rem;
+  }
+
+  .prediction-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .prediction-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .meta-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--sage-light);
+    opacity: 0.8;
+  }
+
+  .meta-value {
+    font-size: 0.9rem;
+    color: var(--cream);
+    text-transform: capitalize;
+  }
+
+  /* ── DIVIDER ── */
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 2rem 0;
+    color: #B0A090;
+    font-size: 0.75rem;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em;
+  }
+
+  .section-divider::before,
+  .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #E0D5C5, transparent);
+  }
+
+  /* ── LOADING ── */
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 2rem;
+    color: #8B7355;
+  }
+
+  .loading.active { display: block; }
+
+  .spinner {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    border: 3px solid #E8DDD0;
+    border-top-color: var(--sage);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 0.8rem;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ERROR ── */
+  .error-msg {
+    display: none;
+    background: #FFF0EE;
+    border: 1px solid #F5C5BB;
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    color: #9B3A2A;
+    font-size: 0.88rem;
+    margin-top: 1rem;
+  }
+
+  .error-msg.active { display: block; }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-item {
+    background: white;
+    border-radius: 14px;
+    padding: 1.2rem 1.5rem;
+    border: 1px solid rgba(212,168,83,0.2);
+    box-shadow: 0 2px 12px rgba(45,30,15,0.05);
+  }
+
+  .stat-number {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--leaf);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.78rem;
+    color: #8B7355;
+    margin-top: 4px;
+    font-weight: 300;
+  }
+
+  /* ── RANGE HINTS ── */
+  .range-hints {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: #B0A090;
+    margin-top: 2px;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    header { padding: 0 1rem; }
+    .logo-text { font-size: 1.4rem; }
+    .form-grid-3 { grid-template-columns: 1fr 1fr; }
+    .stats-bar { grid-template-columns: 1fr; }
+    .prediction-result { flex-direction: column; text-align: center; }
+    nav { gap: 2px; }
+    .nav-btn { padding: 6px 12px; font-size: 0.78rem; }
+  }
+
+  @media (max-width: 480px) {
+    .form-grid-3 { grid-template-columns: 1fr; }
+    .recom-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🌿</div>
+    <div>
+      <div class="logo-text">Krishi<span>Mind</span></div>
+      <div class="header-tag">Intelligent Crop Advisory · India</div>
+    </div>
+  </div>
+  <nav>
+    <button class="nav-btn active" onclick="switchPanel('recommend', this)">Crop Recommender</button>
+    <button class="nav-btn" onclick="switchPanel('predict', this)">Yield Predictor</button>
+  </nav>
+</header>
+
+<div class="hero">
+  <div class="hero-eyebrow">Powered by machine learning · All 700+ Indian districts</div>
+  <h1>Smart decisions for <em>smarter harvests</em></h1>
+  <p>Enter your soil conditions for crop recommendations, or predict production output for any district, crop, and season combination across India.</p>
+</div>
+
+<div class="main-content">
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-number">22</div>
+      <div class="stat-label">Crops supported for recommendation</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">700+</div>
+      <div class="stat-label">Indian districts covered</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">6</div>
+      <div class="stat-label">Growing seasons modelled</div>
+    </div>
+  </div>
+
+  <!-- ══ PANEL 1: RECOMMEND ══ -->
+  <div id="panel-recommend" class="panel active">
+
+    <div class="card">
+      <div class="card-title">🧪 Soil & Climate Parameters</div>
+      <div class="card-subtitle">Provide your field conditions — values are measured from soil tests and local weather data</div>
+
+      <!-- Sliders row -->
+      <div class="form-grid">
+        <div class="slider-field">
+          <div class="slider-header">
+            <label>Nitrogen (N) <span class="field-unit">kg/ha</span></label>
+            <span class="slider-val" id="val-n">50</span>
+          </div>
+          <input type="range" id="sl-n" min="0" max="200" value="50" oninput="updateSlider(this,'val-n')">
+          <div class="range-hints"><span>0</span><span>200</span></div>
+        </div>
+
+        <div class="slider-field">
+          <div class="slider-header">
+            <label>Phosphorus (P) <span class="field-unit">kg/ha</span></label>
+            <span class="slider-val" id="val-p">50</span>
+          </div>
+          <input type="range" id="sl-p" min="0" max="200" value="50" oninput="updateSlider(this,'val-p')">
+          <div class="range-hints"><span>0</span><span>200</span></div>
+        </div>
+
+        <div class="slider-field">
+          <div class="slider-header">
+            <label>Potassium (K) <span class="field-unit">kg/ha</span></label>
+            <span class="slider-val" id="val-k">50</span>
+          </div>
+          <input type="range" id="sl-k" min="0" max="250" value="50" oninput="updateSlider(this,'val-k')">
+          <div class="range-hints"><span>0</span><span>250</span></div>
+        </div>
+
+        <div class="slider-field">
+          <div class="slider-header">
+            <label>Temperature <span class="field-unit">°C</span></label>
+            <span class="slider-val" id="val-temp">25</span>
+          </div>
+          <input type="range" id="sl-temp" min="5" max="50" value="25" step="0.5" oninput="updateSlider(this,'val-temp')">
+          <div class="range-hints"><span>5°C</span><span>50°C</span></div>
+        </div>
+
+        <div class="slider-field">
+          <div class="slider-header">
+            <label>Humidity <span class="field-unit">%</span></label>
+            <span class="slider-val" id="val-hum">60</span>
+          </div>
+          <input type="range" id="sl-hum" min="10" max="100" value="60" oninput="updateSlider(this,'val-hum')">
+          <div class="range-hints"><span>10%</span><span>100%</span></div>
+        </div>
+
+        <div class="slider-field">
+          <div class="slider-header">
+            <label>Soil pH</label>
+            <span class="slider-val" id="val-ph">6.5</span>
+          </div>
+          <input type="range" id="sl-ph" min="3" max="10" value="6.5" step="0.1" oninput="updateSlider(this,'val-ph')">
+          <div class="range-hints"><span>3 (acid)</span><span>10 (base)</span></div>
+        </div>
+
+        <div class="slider-field" style="grid-column: span 2;">
+          <div class="slider-header">
+            <label>Annual Rainfall <span class="field-unit">mm</span></label>
+            <span class="slider-val" id="val-rain">100</span>
+          </div>
+          <input type="range" id="sl-rain" min="20" max="400" value="100" oninput="updateSlider(this,'val-rain')">
+          <div class="range-hints"><span>20mm</span><span>400mm</span></div>
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="getRecommendations()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Analyse & Recommend Crops
+      </button>
+    </div>
+
+    <div id="recom-loading" class="loading">
+      <div class="spinner"></div>
+      <div>Analysing soil profile…</div>
+    </div>
+
+    <div id="recom-error" class="error-msg"></div>
+
+    <div id="recom-results" class="card results-section" style="display:none;">
+      <div class="card-title">🌾 Recommended Crops</div>
+      <div class="card-subtitle">Ranked by suitability score for your soil and climate conditions</div>
+      <div id="recom-grid" class="recom-grid"></div>
+    </div>
+
+  </div><!-- end panel-recommend -->
+
+
+  <!-- ══ PANEL 2: PREDICT ══ -->
+  <div id="panel-predict" class="panel">
+
+    <div class="card">
+      <div class="card-title">📊 Production Parameters</div>
+      <div class="card-subtitle">Select a district, crop, and season to forecast production output</div>
+
+      <div class="form-grid-3">
+        <div class="field">
+          <label>District</label>
+          <select id="pred-district">
+            <option value="">— Select District —</option>
+            {% for d in districts %}
+            <option value="{{ d }}">{{ d.replace('_',' ').title() }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Crop</label>
+          <select id="pred-crop">
+            <option value="">— Select Crop —</option>
+            {% for c in crops %}
+            <option value="{{ c }}">{{ c.replace('_',' ').title() }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Season</label>
+          <select id="pred-season">
+            <option value="">— Select Season —</option>
+            {% for s in seasons %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Year</label>
+          <input type="number" id="pred-year" value="2024" min="1990" max="2050" placeholder="e.g. 2024">
+        </div>
+
+        <div class="field">
+          <label>Cultivated Area <span class="field-unit">hectares</span></label>
+          <input type="number" id="pred-area" value="100" min="0.1" step="0.1" placeholder="e.g. 100">
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="getPrediction()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Predict Production
+      </button>
+    </div>
+
+    <div id="pred-loading" class="loading">
+      <div class="spinner"></div>
+      <div>Running production model…</div>
+    </div>
+
+    <div id="pred-error" class="error-msg"></div>
+
+    <div id="pred-result" class="card results-section" style="display:none;">
+      <div class="card-title">📈 Production Forecast</div>
+      <div class="card-subtitle">Estimated output based on historical patterns and district-level data</div>
+      <div id="pred-result-inner"></div>
+    </div>
+
+  </div><!-- end panel-predict -->
+
+</div><!-- end main-content -->
+
+<script>
+// ── Panel switching ──────────────────────────────────────────────────────
+function switchPanel(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Slider update ────────────────────────────────────────────────────────
+function updateSlider(el, valId) {
+  document.getElementById(valId).textContent = el.value;
+  const pct = ((el.value - el.min) / (el.max - el.min) * 100).toFixed(1) + '%';
+  el.style.setProperty('--pct', pct);
+}
+
+// Init sliders
+document.querySelectorAll('input[type="range"]').forEach(el => {
+  const valId = el.id.replace('sl-', 'val-');
+  updateSlider(el, valId);
+});
+
+// ── Recommendations ──────────────────────────────────────────────────────
+async function getRecommendations() {
+  const loading = document.getElementById('recom-loading');
+  const error   = document.getElementById('recom-error');
+  const results = document.getElementById('recom-results');
+
+  loading.classList.add('active');
+  error.classList.remove('active');
+  results.style.display = 'none';
+
+  const payload = {
+    nitrogen:    document.getElementById('sl-n').value,
+    phosphorus:  document.getElementById('sl-p').value,
+    potassium:   document.getElementById('sl-k').value,
+    temperature: document.getElementById('sl-temp').value,
+    humidity:    document.getElementById('sl-hum').value,
+    ph:          document.getElementById('sl-ph').value,
+    rainfall:    document.getElementById('sl-rain').value,
+  };
+
+  try {
+    const res  = await fetch('http://127.0.0.1:5000/api/recommend', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    loading.classList.remove('active');
+
+    if (!data.success) throw new Error(data.error);
+
+    const grid = document.getElementById('recom-grid');
+    grid.innerHTML = '';
+
+    data.recommendations.forEach((item, i) => {
+      const isTop = i === 0;
+      const card = document.createElement('div');
+      card.className = 'crop-card' + (isTop ? ' top-pick' : '');
+      card.innerHTML = `
+        <div class="crop-emoji">${item.emoji}</div>
+        <div class="crop-name">${item.crop}</div>
+        <div class="crop-score-bar">
+          <div class="crop-score-fill" style="width:${item.score}%"></div>
+        </div>
+        <div class="crop-score-text">${item.score}% match</div>
+      `;
+      grid.appendChild(card);
+    });
+
+    results.style.display = 'block';
+  } catch(e) {
+    loading.classList.remove('active');
+    error.textContent = '⚠ ' + (e.message || 'Something went wrong. Please try again.');
+    error.classList.add('active');
+  }
+}
+
+
+async function getPrediction() {
+  const loading = document.getElementById('pred-loading');
+  const error   = document.getElementById('pred-error');
+  const result  = document.getElementById('pred-result');
+
+  const district = document.getElementById('pred-district').value;
+  const crop     = document.getElementById('pred-crop').value;
+  const season   = document.getElementById('pred-season').value;
+  const year     = document.getElementById('pred-year').value;
+  const area     = document.getElementById('pred-area').value;
+
+  if (!district || !crop || !season) {
+    error.textContent = '⚠ Please select a district, crop, and season.';
+    error.classList.add('active');
+    return;
+  }
+
+  loading.classList.add('active');
+  error.classList.remove('active');
+  result.style.display = 'none';
+
+  try {
+    const res  = await fetch('/api/predict', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ district, crop, season, year, area })
+    });
+    const data = await res.json();
+
+    loading.classList.remove('active');
+
+    if (!data.success) throw new Error(data.error);
+
+    const cropEmojis = {
+      rice:'🌾', wheat:'🌾', maize:'🌽', sugarcane:'🎋', cotton:'🌿',
+      potato:'🥔', onion:'🧅', banana:'🌿', groundnut:'🥜', soyabean:'🌱'
+    };
+    const emoji = cropEmojis[data.crop.toLowerCase()] || '🌾';
+
+    const fmt = n => n >= 1e6 ? (n/1e6).toFixed(2) + ' million' :
+                     n >= 1e3 ? (n/1e3).toFixed(1) + ' thousand' :
+                     n.toFixed(2);
+
+    document.getElementById('pred-result-inner').innerHTML = `
+      <div class="prediction-result">
+        <div class="prediction-icon">${emoji}</div>
+        <div>
+          <div class="prediction-label">Estimated Production</div>
+          <div class="prediction-value">${fmt(data.production)}</div>
+          <div class="prediction-unit">metric tonnes</div>
+          <div class="prediction-meta">
+            <div class="prediction-meta-item">
+              <span class="meta-label">District</span>
+              <span class="meta-value">${data.district.toLowerCase()}</span>
+            </div>
+            <div class="prediction-meta-item">
+              <span class="meta-label">Crop</span>
+              <span class="meta-value">${data.crop.toLowerCase()}</span>
+            </div>
+            <div class="prediction-meta-item">
+              <span class="meta-label">Season</span>
+              <span class="meta-value">${data.season}</span>
+            </div>
+            <div class="prediction-meta-item">
+              <span class="meta-label">Year</span>
+              <span class="meta-value">${data.year}</span>
+            </div>
+            <div class="prediction-meta-item">
+              <span class="meta-label">Area</span>
+              <span class="meta-value">${data.area} ha</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    result.style.display = 'block';
+  } catch(e) {
+    loading.classList.remove('active');
+    error.textContent = '⚠ ' + (e.message || 'Something went wrong. Please try again.');
+    error.classList.add('active');
+  }
+}
+</script>
+</body>
+</html>
